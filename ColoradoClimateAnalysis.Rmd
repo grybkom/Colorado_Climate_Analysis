@@ -1,0 +1,649 @@
+---
+title: "ColoradoClimateAnalysis"
+author: "Michael Grybko"
+date: "2024-10-12"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r, libraries}
+library(tidyverse)
+library(lubridate)
+```
+
+```{r, import climate data}
+gj_data <- read.csv("USW00023066.csv")
+fc_data <- read.csv("USC00053005.csv")
+```
+
+```{r, Tidy Grand Junction Data}
+# Drop unnecessary columns
+gj_data <- gj_data[-c(1,17:138)]
+
+# Drop NA entries
+gj_data <- gj_data %>% drop_na()
+
+# Check for NA entries
+(which(is.na(gj_data)))
+
+# Adjust the temperature values to degrees Celsius from tenths of degrees Celsius
+gj_data$TMAX <- gj_data$TMAX / 10
+gj_data$TMIN <- gj_data$TMIN / 10
+
+# Adjust the precipitaton values to millimeters from tenths of millimeters
+gj_data$PRCP <- gj_data$PRCP / 10
+
+# Convert the data column to a date format
+gj_data <- gj_data %>% 
+  mutate(DATE = ymd(DATE))
+
+# Filter the data to only include years 1940 through 2023
+gj_data <- gj_data %>% 
+  filter(year(DATE) >= 1940 & year(DATE) <= 2023)
+
+summary(gj_data)
+```
+
+```{r, Tidy Fort Collins Data}
+# drop unnecessary columns
+fc_data <- fc_data[-c(1,11,12,17:138)]
+
+# Drop NA entries
+fc_data <- fc_data %>% drop_na()
+
+# Check for NA entries
+(which(is.na(fc_data)))
+
+# Adjust the temperature values to degrees Celsius from tenths of degrees Celsius
+fc_data$TMAX <- fc_data$TMAX / 10
+fc_data$TMIN <- fc_data$TMIN / 10
+
+# Adjust the precipitaton values to millimeters from tenths of millimeters
+fc_data$PRCP <- fc_data$PRCP / 10
+
+# Convert the data column to a date format
+fc_data <- fc_data %>% 
+  mutate(DATE = ymd(DATE))
+
+# Filter the data to only include years 1940 through 2023
+fc_data <- fc_data %>% 
+  filter(year(DATE) >= 1940 & year(DATE) <= 2023)
+
+summary(fc_data)
+```
+
+# Precipitation by Year Grand Junction
+There have been four major droughts in Colorado in the 21st century, 2002, 2012, 2018, and 2020 these will be marked with a red asterisks. Years with floods will be marked with a dark blue asterisk. 
+
+```{r, Grand Junction Precipitation by Year}
+# Sum the PRCP column by year
+gj_yearly_prcp <- gj_data %>% 
+  mutate(Year = year(DATE)) %>%
+  group_by(Year) %>% 
+  summarize(total_prcp = sum(PRCP, na.rm = TRUE), # Total precipitation by year
+            ave_prcp = mean(PRCP, na.rm = TRUE))  # Average precipitation by year
+
+# Plot total precipitation per year
+gj_prcp_year <- ggplot(data = gj_yearly_prcp , aes(x = Year)) +
+  geom_line(aes(y = total_prcp, color ="Total Precipitation"), size = 1.5) +
+  geom_smooth(aes(y = total_prcp, color ="Smoothed Precipitation"), method ="loess", size =1, linetype=2) +  
+  # Add a points for drought years with a red asterisk
+  geom_point(data = gj_yearly_prcp %>% filter(Year %in% c(2002,2012,2018,2020)), 
+             aes(x = Year, y = total_prcp), 
+             shape = 8, size = 5, color = "red") +  
+  # Add a points for regional floods with a darkblue asterisk
+  geom_point(data = gj_yearly_prcp %>% filter(Year %in% c(1984,1983,1952,1957)), 
+             aes(x = Year, y = total_prcp), 
+             shape = 8, size = 5, color = "darkblue") +  
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+  scale_y_continuous(limits=c(100, 400)) +
+ scale_color_manual(values = c("Total Precipitation" = "green", "Smoothed Precipitation" = "darkgreen")) +
+  labs(title = "Total Precipitation per Year Grand Junction CO",
+       x = "Year",
+       y = "Total Precipitation in mm") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16, hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.7, 0.98),  
+        legend.justification = c(0, 1)) 
+
+# save plots as jpeg
+ggsave("gj_prcp_year.jpeg", width = 10, height = 6, dpi = 300)
+
+gj_prcp_year
+
+```
+
+```{r, Grand Junction Snow by Year}
+# Sum the PRCP column by year
+gj_yearly_snow <- gj_data %>% 
+  mutate(Year = year(DATE)) %>%
+  group_by(Year) %>% 
+  summarize(total_snow  = sum(SNOW, na.rm = TRUE), # Total precipitation by year
+            ave_snow = mean(SNOW, na.rm = TRUE))  # Average precipitation by year
+
+# Plot total snow per year
+gj_snow_year <- ggplot(data = gj_yearly_snow , aes(x = Year)) +
+  geom_line(aes(y = total_snow, color ="Total Snow"), size = 1.5) +
+  geom_smooth(aes(y = total_snow, color ="Smoothed Snow"), method ="loess", size =1, linetype=2) +   
+  # Add a points for drought years with a red asterisk
+  geom_point(data = gj_yearly_snow %>% filter(Year %in% c(2002,2012,2018,2020)), 
+             aes(x = Year, y = total_snow), 
+             shape = 8, size = 5, color = "red") +  
+  # Add a points for regional floods with a darkblue asterisk
+  geom_point(data = gj_yearly_snow %>% filter(Year %in% c(1984,1983,1952,1957)), 
+             aes(x = Year, y = total_snow), 
+             shape = 8, size = 5, color = "darkblue") +  
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+ scale_color_manual(values = c("Total Snow" = "skyblue", "Smoothed Snow" = "blue")) +
+  labs(title = "Total Snow per Year Grand Junction CO",
+       x = "Year",
+       y = "Total Snow in mm") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16, hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.7, 0.98),  
+        legend.justification = c(0, 1)) 
+
+# save plots as jpegs
+ggsave("gj_snow_year.jpeg", width = 10, height = 6, dpi = 300)
+
+gj_snow_year
+```
+
+# Temperature Trends for Grand Junction
+The warmest year to date in Colorado is 2012, which will be marked with an asterisk. 
+To examine trends by decade the deviation from the mean maximum or minimum temperature were plotted.
+
+```{r, Grand Junction Max Temp by Year}
+gj_yearly_max_temp <- gj_data %>% 
+  mutate(Year = year(DATE)) %>% 
+  group_by(Year) %>% 
+  summarize(ave_max_temp = mean(TMAX, na.rm = T))
+
+# plot average max temp by year with smoothed line
+gj_max_temp_year <- ggplot(data = gj_yearly_max_temp , aes(x = Year)) +
+  geom_line(aes(y = ave_max_temp, color ="Average Max Temp"), size = 1.5) +
+  geom_smooth(aes(y = ave_max_temp, color ="Smoothed Temp"), method ="loess", size = 1, linetype=2) +  
+  # Add a point for 2012 with an asterisk
+  geom_point(data = gj_yearly_max_temp %>% filter(Year == 2012), 
+             aes(x = Year, y = ave_max_temp), 
+             shape = 8, size = 5, color = "black") +  # Asterisk for 2012
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+  scale_y_continuous(limits=c(16, 21)) +
+  scale_color_manual(values = c("red", "darkred"), 
+                    labels = c("Average Max Temp", "Smoothed Max Temp")) +
+  labs(title = "Average Max Temperature by Year Grand Junction CO",
+       x = "Year",
+       y = "Max Temp °C") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16, hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.025, 0.95),  
+        legend.justification = c(0, 1)) 
+
+ggsave("gj_max_temp_year.jpeg", width = 10, height = 6, dpi = 300)
+gj_max_temp_year
+```
+
+```{r, Grand Junction Max Temp by Decade}
+# Calculate the mean of TMAX
+gj_ave_max_temp <- mean(gj_data$TMAX)
+# Group by decade and calculate the difference from mean
+gj_decade_max_temp <- gj_data %>% 
+  mutate(Year = year(DATE),
+         Decade = (Year %/% 10) * 10) %>% 
+  filter(year(DATE) < 2020) %>% 
+  group_by(Decade) %>% 
+  summarize(
+    diff_ave_max_temp = (mean(TMAX, na.rm = TRUE) - gj_ave_max_temp),
+    sd_max_temp = sd(TMAX, na.rm = TRUE),   # Standard deviation of max temperature
+    count = n()                            # Number of observations per decade
+  )
+# Compute standard error 
+gj_decade_max_temp<- gj_decade_max_temp %>%
+  mutate(se_max_temp = sd_max_temp / sqrt(count))
+
+# Categorize each decade as positive or negative
+gj_decade_max_temp <- gj_decade_max_temp %>%
+  mutate(temp_category = ifelse(diff_ave_max_temp >= 0, "Positive", "Negative"))
+
+
+# Create the bar plot with color gradient based on the value of diff_ave_max_temp
+gj_max_temp_decade <- ggplot(data = gj_decade_max_temp, 
+                             aes(x = as.factor(Decade), 
+                                 y = diff_ave_max_temp, 
+                                 fill = diff_ave_max_temp)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = diff_ave_max_temp - se_max_temp, 
+                    ymax = diff_ave_max_temp + se_max_temp), 
+                width = 0.2, color = "black") +
+  scale_fill_gradient2(low = "skyblue1", mid = "white", high = "firebrick2", 
+                       midpoint = 0, 
+                       name = "Temp Deviation") +
+  labs(title = "Changes in Average Max Temperature by Decade in Grand Junction",
+       x = "Decade",
+       y = "Deviation from Average Max Temperature (°C)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=14, hjust = 0.5, face = "bold"), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10, face = "bold"),
+    axis.line = element_line(size = 1, colour = "black")
+  )
+
+# Save the updated plot as a JPEG file
+ggsave("gj_max_temp_decade_anomalies_scaled.jpeg", plot = gj_max_temp_decade, width = 10, height = 6, dpi = 300)
+
+# Display the plot
+gj_max_temp_decade
+```
+
+```{r, Grand Junction Min Temp by Year}
+gj_yearly_min_temp <- gj_data %>% 
+  mutate(Year = year(DATE)) %>% 
+  group_by(Year) %>% 
+  summarize(ave_min_temp = mean(TMIN, na.rm = TRUE))
+
+gj_min_temp_year <- ggplot(data = gj_yearly_min_temp , aes(x = Year)) +
+  geom_line(aes(y = ave_min_temp, color = "Average Min Temp"), size = 1.5) +
+  geom_smooth(aes(y = ave_min_temp, color ="Smoothed Temp"), method ="loess", size = 1, linetype=2) + 
+  # Add a point for 2012 with an asterisk
+  geom_point(data = gj_yearly_min_temp %>% filter(Year == 2012), 
+             aes(x = Year, y = ave_min_temp), 
+             shape = 8, size = 5, color = "black") +  # Asterisk for 2012
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+  scale_color_manual(values = c("blue", "navyblue"), 
+                    labels = c("Average Min Temp", "Smoothed Min Temp")) +
+  labs(title = "Average Minimum Temperature by Year Grand Junction CO",
+       x = "Year",
+       y = "Average Min Temp °C") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16, hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"),  
+        legend.position = c(0.75, 0.95),  
+        legend.justification = c(0, 1)) 
+
+ggsave("gj_min_temp_year.jpeg", width = 10, height = 6, dpi = 300)
+gj_min_temp_year
+```
+
+```{r, Grand Junction Min Temp by Decade}
+# Calculate the mean of TMIN
+gj_ave_min_temp <- mean(gj_data$TMIN)
+# Group by decade and calculate the difference from mean
+gj_decade_min_temp <- gj_data %>% 
+  mutate(Year = year(DATE),
+         Decade = (Year %/% 10) * 10) %>% 
+  filter(year(DATE) < 2020) %>% 
+  group_by(Decade) %>% 
+  summarize(
+    diff_ave_min_temp = (mean(TMIN, na.rm = TRUE) - gj_ave_min_temp),
+    sd_min_temp = sd(TMIN, na.rm = TRUE),   # Standard deviation of max temperature
+    count = n()                            # Number of observations per decade
+  )
+# Compute standard error 
+gj_decade_min_temp<- gj_decade_min_temp %>%
+  mutate(se_min_temp = sd_min_temp / sqrt(count))
+
+# Categorize each decade as positive or negative
+gj_decade_min_temp <- gj_decade_min_temp %>%
+  mutate(temp_category = ifelse(diff_ave_min_temp >= 0, "Positive", "Negative"))
+
+# Create the bar plot with color gradient based on the value of diff_ave_max_temp
+gj_min_temp_decade <- ggplot(data = gj_decade_min_temp, 
+                             aes(x = as.factor(Decade), 
+                                 y = diff_ave_min_temp, 
+                                 fill = diff_ave_min_temp)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = diff_ave_min_temp - se_min_temp, 
+                    ymax = diff_ave_min_temp + se_min_temp), 
+                width = 0.2, color = "black") +
+  scale_fill_gradient2(low = "skyblue1", mid = "white", high = "firebrick2", 
+                       midpoint = 0, 
+                       name = "Temp Deviation") +
+  labs(title = "Changes in Average Min Temperature by Decade in Grand Junction",
+       x = "Decade",
+       y = "Deviation from Average Min Temperature (°C)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=14, hjust = 0.5, face = "bold"), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10, face = "bold"),
+    axis.line = element_line(size = 1, colour = "black")
+  )
+
+# Save the bar plot as a JPEG file
+ggsave("gj_min_temp_decade.jpeg",width = 10, height = 6, dpi = 300)
+
+(gj_min_temp_decade)
+```
+# Precipitation by Year For Fort Collins
+There have been four major droughts in Colorado in the 21st century, 2002, 2012, 2018, and 2020 these will be marked with a red asterisks. Years with floods will be marked with a dark blue asterisk. 
+
+```{r, Fort Collins Precipitation by Year}
+# Sum the PRCP column by year
+fc_yearly_prcp <- fc_data %>% 
+  mutate(Year = year(DATE)) %>%
+  group_by(Year) %>% 
+  summarize(total_prcp = sum(PRCP, na.rm = TRUE), # Total precipitation by year
+            ave_prcp = mean(PRCP, na.rm = TRUE))  # Average precipitation by year
+
+# Plot total precipitation per year
+fc_prcp_year <- ggplot(data = fc_yearly_prcp , aes(x = Year)) +
+  geom_line(aes(y = total_prcp, color ="Total Precipitation"), size = 1.5) +
+  geom_smooth(aes(y = total_prcp, color ="Smoothed Precipitation"), method ="loess", size =1, linetype=2) +  
+  # Add a points with an asterisk
+  geom_point(data = fc_yearly_prcp %>% filter(Year %in% c(2002,2012,2018,2020)), 
+             aes(x = Year, y = total_prcp), 
+             shape = 8, size = 5, color = "red") + 
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+  # Add a points for regional floods with a darkblue asterisk
+  geom_point(data = fc_yearly_prcp %>% filter(Year %in% c(2013,1997)), 
+             aes(x = Year, y = total_prcp), 
+             shape = 8, size = 5, color = "darkblue") + 
+  #scale_y_continuous(limits=c(100, 400)) +
+ scale_color_manual(values = c("Total Precipitation" = "green", "Smoothed Precipitation" = "darkgreen")) +
+  labs(title = "Total Precipitation per Year Fort Collins CO",
+       x = "Year",
+       y = "Total Precipitation in mm") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16, hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.7, 0.98),  
+        legend.justification = c(0, 1)) 
+
+# save plot as jpeg
+ggsave("fc_prcp_year.jpeg", width = 10, height = 6, dpi = 300)
+
+fc_prcp_year
+
+```
+
+```{r, Fort Colllins Snow by Year}
+# Sum the PRCP column by year
+fc_yearly_snow <- fc_data %>% 
+  mutate(Year = year(DATE)) %>%
+  group_by(Year) %>% 
+  summarize(total_snow = sum(SNOW, na.rm = TRUE), # Total precipitation by year
+            ave_snow = mean(SNOW, na.rm = TRUE))  # Average precipitation by year
+
+# Plot total precipitation per year
+fc_snow_year <- ggplot(data = fc_yearly_snow , aes(x = Year)) +
+  geom_line(aes(y = total_snow, color ="Total Snow"), size = 1.5) +
+  geom_smooth(aes(y = total_snow, color ="Smoothed Snow"), method ="loess", size =1, linetype=2) + 
+  # Add a points with an asterisk
+  geom_point(data = fc_yearly_snow %>% filter(Year %in% c(2002,2012,2018,2020)), 
+             aes(x = Year, y = total_snow), 
+             shape = 8, size = 5, color = "red") + 
+  # Add a points for regional floods with a darkblue asterisk
+  geom_point(data = fc_yearly_snow %>% filter(Year %in% c(2013,1997)), 
+             aes(x = Year, y = total_snow), 
+             shape = 8, size = 5, color = "darkblue") + 
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+ scale_color_manual(values = c("Total Snow" = "skyblue", "Smoothed Snow" = "blue")) +
+  labs(title = "Total Snow per Year Fort Collins CO",
+       x = "Year",
+       y = "Total Snow in mm") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16, hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.7, 0.98),  
+        legend.justification = c(0, 1)) 
+
+# save plots as jpegs
+ggsave("fc_snow_year.jpeg", width = 10, height = 6, dpi = 300)
+
+fc_snow_year
+```
+
+# Temperature Trends for Fort Collins
+The warmest year to date in Colorado is 2012, which will be marked with an asterisk. 
+To examine trends by decade the deviation from the mean maximum or minimum temperature were plotted.
+
+```{r, Fort Collins Max Temp by Year}
+fc_yearly_max_temp <- fc_data %>% 
+  mutate(Year = year(DATE)) %>% 
+  group_by(Year) %>% 
+  summarize(ave_max_temp = mean(TMAX, na.rm = T))
+
+# plot average max temp by year with smoothed line
+fc_max_temp_year <- ggplot(data = fc_yearly_max_temp , aes(x = Year)) +
+  geom_line(aes(y = ave_max_temp, color ="Average Max Temp"), size = 1.5) +
+  geom_smooth(aes(y = ave_max_temp, color ="Smoothed Temp"), method ="loess", size = 1, linetype=2) +   
+  # Add a point for 2012 with an asterisk
+  geom_point(data = fc_yearly_max_temp %>% filter(Year == 2012), 
+             aes(x = Year, y = ave_max_temp), 
+             shape = 8, size = 5, color = "black") +  # Asterisk for 2012
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+  scale_y_continuous(limits=c(15, 21)) +
+  scale_color_manual(values = c("red", "darkred"), 
+                    labels = c("Average Max Temp", "Smoothed Max Temp")) +
+  labs(title = "Average Max Temperature by Year Fort Collins CO",
+       x = "Year",
+       y = "Max Temp °C") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16, hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.005, 0.995),  
+        legend.justification = c(0, 1)) 
+
+ggsave("fc_max_temp_year.jpeg", width = 10, height = 6, dpi = 300)
+fc_max_temp_year
+```
+
+```{r, Fort Collins Max Temp by Decade}
+# Calculate the mean of TMAX
+fc_ave_max_temp <- mean(fc_data$TMAX)
+# Group by decade and calculate the difference from mean
+fc_decade_max_temp <- fc_data %>% 
+  mutate(Year = year(DATE),
+         Decade = (Year %/% 10) * 10) %>% 
+  filter(year(DATE) < 2020) %>% 
+  group_by(Decade) %>% 
+  summarize(
+    diff_ave_max_temp = (mean(TMAX, na.rm = TRUE) - fc_ave_max_temp),
+    sd_max_temp = sd(TMAX, na.rm = TRUE),   # Standard deviation of max temperature
+    count = n()                            # Number of observations per decade
+  )
+# Compute standard error 
+fc_decade_max_temp<- fc_decade_max_temp %>%
+  mutate(se_max_temp = sd_max_temp / sqrt(count))
+
+# Categorize each decade as positive or negative
+fc_decade_max_temp <- fc_decade_max_temp %>%
+  mutate(temp_category = ifelse(diff_ave_max_temp >= 0, "Positive", "Negative"))
+
+# Create the bar plot with color gradient based on the value of diff_ave_max_temp
+fc_max_temp_decade <- ggplot(data = fc_decade_max_temp, 
+                             aes(x = as.factor(Decade), 
+                                 y = diff_ave_max_temp, 
+                                 fill = diff_ave_max_temp)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = diff_ave_max_temp - se_max_temp, 
+                    ymax = diff_ave_max_temp + se_max_temp), 
+                width = 0.2, color = "black") +
+  scale_fill_gradient2(low = "skyblue1", mid = "white", high = "firebrick2", 
+                       midpoint = 0, 
+                       name = "Temp Deviation") +
+  labs(title = "Changes in Average Max Temperature by Decade in Fort Collins",
+       x = "Decade",
+       y = "Deviation from Average Max Temperature (°C)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=14, hjust = 0.5, face = "bold"), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10, face = "bold"),
+    axis.line = element_line(size = 1, colour = "black")
+  )
+# Save the bar plot as a JPEG file
+ggsave("fc_max_temp_decade.jpeg",width = 10, height = 6, dpi = 300)
+
+(fc_max_temp_decade)
+```
+
+```{r, Fort Collins Min Temp by Year}
+fc_yearly_min_temp <- fc_data %>% 
+  mutate(Year = year(DATE)) %>% 
+  group_by(Year) %>% 
+  summarize(ave_min_temp = mean(TMIN, na.rm = TRUE))
+
+fc_min_temp_year <- ggplot(data = fc_yearly_min_temp , aes(x = Year)) +
+  geom_line(aes(y = ave_min_temp, color = "Average Min Temp"), size = 1.5) +
+  geom_smooth(aes(y = ave_min_temp, color ="Smoothed Temp"), method ="loess", size = 1, linetype=2) + 
+  # Add a point for 2012 with an asterisk
+  geom_point(data = fc_yearly_min_temp %>% filter(Year == 2012), 
+             aes(x = Year, y = ave_min_temp), 
+             shape = 8, size = 5, color = "black") +  # Asterisk for 2012
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+  scale_color_manual(values = c("blue", "navyblue"), 
+                    labels = c("Average Min Temp", "Smoothed Min Temp")) +
+  labs(title = "Average Minimum Temperature by Year Fort Collins CO",
+       x = "Year",
+       y = "Min Temp °C") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=16,hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.025, 0.95),  
+        legend.justification = c(0, 1)) 
+
+ggsave("fc_min_temp_year.jpeg", width = 10, height = 6, dpi = 300)
+fc_min_temp_year
+```
+
+```{r, Fort Collins Min Temp by Decade}
+# Calculate the mean of TMIN
+fc_ave_min_temp <- mean(fc_data$TMIN)
+# Group by decade and calculate the difference from mean
+fc_decade_min_temp <- fc_data %>% 
+  mutate(Year = year(DATE),
+         Decade = (Year %/% 10) * 10) %>% 
+  filter(year(DATE) < 2020) %>% 
+  group_by(Decade) %>% 
+  summarize(
+    diff_ave_min_temp = (mean(TMIN, na.rm = TRUE) - fc_ave_min_temp),
+    sd_min_temp = sd(TMIN, na.rm = TRUE),   # Standard deviation of max temperature
+    count = n()                            # Number of observations per decade
+  )
+# Compute standard error 
+fc_decade_min_temp<- fc_decade_min_temp %>%
+  mutate(se_min_temp = sd_min_temp / sqrt(count))
+
+# Categorize each decade as positive or negative
+fc_decade_min_temp <- fc_decade_min_temp %>%
+  mutate(temp_category = ifelse(diff_ave_min_temp >= 0, "Positive", "Negative"))
+
+# Create the bar plot with color gradient based on the value of diff_ave_max_temp
+fc_min_temp_decade <- ggplot(data = fc_decade_min_temp, 
+                             aes(x = as.factor(Decade), 
+                                 y = diff_ave_min_temp, 
+                                 fill = diff_ave_min_temp)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = diff_ave_min_temp - se_min_temp, 
+                    ymax = diff_ave_min_temp + se_min_temp), 
+                width = 0.2, color = "black") +
+  scale_fill_gradient2(low = "skyblue1", mid = "white", high = "firebrick2", 
+                       midpoint = 0, 
+                       name = "Temp Deviation") +
+  labs(title = "Changes in Average Min Temperature by Decade in Fort Collins",
+       x = "Decade",
+       y = "Deviation from Average Min Temperature (°C)") +
+  theme_minimal() +
+  theme(plot.title = element_text(size=14, hjust = 0.5, face = "bold"), 
+    panel.grid.major = element_blank(),
+    panel.grid.minor = element_blank(),
+    axis.title = element_text(size = 12, face = "bold"),
+    axis.text = element_text(size = 10, face = "bold"),
+    axis.line = element_line(size = 1, colour = "black")
+  )
+
+# Save the bar plot as a JPEG file
+ggsave("fc_min_temp_decade.jpeg",width = 10, height = 6, dpi = 300)
+
+(fc_min_temp_decade)
+```
+
+```{r, Fort Collins Max Temp by Season}
+fc_seasonal_max_temp <- fc_data %>% 
+  mutate(Year = year(DATE), 
+         Month = month(DATE), 
+         Season = case_when(
+           Month %in% c(12, 1, 2) ~ "Winter",
+           Month %in% c(3, 4, 5) ~ "Spring",
+           Month %in% c(6, 7, 8) ~ "Summer",
+           Month %in% c(9, 10, 11) ~ "Fall"
+         )) %>% 
+  group_by(Year, Season) %>% 
+  summarize(ave_max_temp = mean(TMAX, na.rm = TRUE))
+
+fc_fall_max_temp <- fc_seasonal_max_temp %>% 
+  filter(Season == "Fall")
+
+# plot average max temp by month with smoothed line
+fc_temp_plot_fall <- ggplot(data = fc_fall_max_temp, aes(x = Year)) +
+  geom_line(aes(y = ave_max_temp, color = "Average Max Temp"), size = 1.5) +
+  geom_smooth(aes(y = ave_max_temp, color ="Smoothed Temp"), method ="loess", size = 1, linetype=2) +   
+  scale_x_continuous(breaks = seq(1940, 2023, by = 10)) +
+  scale_color_manual(values = c("red", "darkred"), 
+                    labels = c("Average Max Temp", "Smoothed Max Temp")) + 
+  labs(title = "Average Fall Max Temperature Fort Collins CO",
+       x = "Year",
+       y = "Average Max Temperature (°C)") +  
+  theme_minimal() +
+  theme(plot.title = element_text(size=16,hjust = 0.5, face = "bold"),  
+        axis.title = element_text(size=12, face = "bold"), 
+        axis.line = element_line(size = 1, colour = "black"),
+        axis.text = element_text(size=10, face="bold"), 
+        legend.position = c(0.005, 0.995),  
+        legend.justification = c(0, 1),
+        panel.grid.minor = element_blank())
+
+ggsave("fc_temp_plot_fall.jpeg", plot = fc_temp_plot_fall, width = 10, height = 6, dpi = 300)
+
+fc_temp_plot_fall
+```
+
+# Linear Models
+Simple linear models with either maximum or minimum temperature as the response and date as the predictor for Grand Junction and Fort Collins. All models show a significant relationship between temperature and date accept the the minimum temperature data for Grand Junction.
+
+```{r, linear model Grand Junction maximum temp}
+gj.max.lm <- lm(ave_max_temp ~ Year, data = gj_yearly_max_temp)
+summary(gj.max.lm)
+```
+
+```{r, linear model Grand Junction minimum temp}
+gj.min.lm <- lm(ave_min_temp ~ Year, data = gj_yearly_min_temp)
+summary(gj.min.lm)
+```
+
+```{r, linear model Fort Collins maximum temp}
+fc.max.lm <- lm(ave_max_temp ~ Year, data = fc_yearly_max_temp)
+summary(fc.max.lm)
+```
+
+```{r, linear model Fort Collins minimum temp}
+fc.min.lm <- lm(ave_min_temp ~ Year, data = fc_yearly_min_temp)
+summary(fc.min.lm)
+```
+
