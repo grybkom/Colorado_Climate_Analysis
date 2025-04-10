@@ -28,16 +28,19 @@ Colorado’s varied topography, including mountains, plains, valleys, and desert
 
 ![gj_min_temp_decade](https://github.com/user-attachments/assets/07dbe365-3e11-4c24-bd53-c63cf8350738)
 
+
 **How to Use:**
 
 1. Clone the repository:
    ```bash
    git clone https://github.com/grybkom/Colorado_Climate_Analysis.git
    cd Colorado_Climate_Analysis
+   
+2. Open analysis.Rmd in RStudio.
 
-	2.	Open analysis.Rmd in RStudio.
 
 **Citation**
+
 Bolinger, B., Lukas, J., Schumacher, R., & Goble, P. (2024). Climate change in Colorado report. Colorado Water Conservation Board. https://climatechange.colostate.edu/downloads/CCC%202024%20Climate%20Assessment%20Report%20pages%20view.pdf
 
 **Author**
