@@ -24,4 +24,8 @@ Colorado’s varied topography, including mountains, plains, valleys, and desert
 
 ![gj_max_temp_decade_anomalies_scaled](https://github.com/user-attachments/assets/c8f31af1-4b88-4067-8c2a-92d66682250b)
 
+**Citation**
 Bolinger, B., Lukas, J., Schumacher, R., & Goble, P. (2024). Climate change in Colorado report. Colorado Water Conservation Board. https://climatechange.colostate.edu/downloads/CCC%202024%20Climate%20Assessment%20Report%20pages%20view.pdf
+
+**Author**
+Michael Grybko - grybkom
